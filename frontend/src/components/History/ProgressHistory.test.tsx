@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { ProgressHistory } from "./ProgressHistory";
-import type { Entry, FootprintResult } from "../lib/types";
+import type { Entry, FootprintResult } from "../../lib/types";
 
 function makeEntry(id: string, createdAt: string, tonnes: number): Entry {
   const result: FootprintResult = {

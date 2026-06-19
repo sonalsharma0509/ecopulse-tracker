@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { FootprintReport } from "./FootprintReport";
-import type { FootprintResult } from "../lib/types";
+import type { FootprintResult } from "../../lib/types";
 
 const result: FootprintResult = {
   breakdown_kg: { transport: 2000, home: 1000, diet: 1500, consumption: 500 },

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { AdvicePanel } from "./AdvicePanel";
-import type { InsightsResponse } from "../lib/types";
+import type { InsightsResponse } from "../../lib/types";
 
 const baseInsights: InsightsResponse = {
   summary: "Transport is your biggest source of emissions.",
