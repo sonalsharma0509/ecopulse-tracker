@@ -105,3 +105,15 @@ class Entry(EntryCreate):
 
     id: str
     created_at: str  # ISO-8601 UTC
+
+
+class EntryStats(BaseModel):
+    """Aggregate statistics computed from a device's tracking history."""
+
+    total_entries: int
+    latest_tonnes: float
+    average_tonnes: float
+    minimum_tonnes: float
+    maximum_tonnes: float
+    trend_direction: Literal["falling", "rising", "stable"]
+    percent_change: float

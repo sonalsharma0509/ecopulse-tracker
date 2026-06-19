@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Path, Query
 
 from app.deps import get_repository
-from app.models import Entry, EntryCreate
+from app.models import Entry, EntryCreate, EntryStats
 from app.repository.base import EntryRepository
 
 router = APIRouter(prefix="/api/entries", tags=["entries"])
@@ -27,3 +27,12 @@ async def fetch_history(
 ) -> list[Entry]:
     """Return a device's footprint history, newest first."""
     return await repo.async_list_for_device(device_id, limit=limit)
+
+
+@router.get("/{device_id}/stats", response_model=EntryStats)
+async def get_stats(
+    device_id: str = _DEVICE_ID,
+    repo: EntryRepository = Depends(get_repository),
+) -> EntryStats:
+    """Return aggregate statistics computed from the device's tracking history."""
+    return await repo.async_stats_for_device(device_id)

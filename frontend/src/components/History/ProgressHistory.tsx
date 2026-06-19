@@ -19,6 +19,11 @@ export function ProgressHistory({ entries }: Props) {
   const previous = entries.length > 1 ? entries[1].result.total_annual_tonnes : null;
   const trend = previous === null ? null : latest - previous;
 
+  const allTonnes = entries.map((e) => e.result.total_annual_tonnes);
+  const avg = allTonnes.reduce((a, b) => a + b, 0) / allTonnes.length;
+  const min = Math.min(...allTonnes);
+  const max = Math.max(...allTonnes);
+
   return (
     <section className="card" aria-labelledby="history-heading">
       <h2 id="history-heading">Your history</h2>
@@ -36,6 +41,12 @@ export function ProgressHistory({ entries }: Props) {
           )}
         </p>
       )}
+
+      <div className="stats-row" aria-label="Footprint statistics">
+        <span className="stat"><strong>Average:</strong> {formatTonnes(avg)} t</span>
+        <span className="stat"><strong>Min:</strong> {formatTonnes(min)} t</span>
+        <span className="stat"><strong>Max:</strong> {formatTonnes(max)} t</span>
+      </div>
 
       <table className="history">
         <caption className="visually-hidden">Saved footprint entries, newest first</caption>

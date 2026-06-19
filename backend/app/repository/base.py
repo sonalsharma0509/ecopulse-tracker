@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.models import FootprintInput, Entry, FootprintResult
+from app.models import Entry, EntryStats, FootprintInput, FootprintResult
 
 
 class EntryRepository(Protocol):
@@ -33,4 +33,8 @@ class EntryRepository(Protocol):
 
     async def async_list_for_device(self, device_id: str, limit: int = 50) -> list[Entry]:
         """Async variant of ``list_for_device``."""
+        ...
+
+    async def async_stats_for_device(self, device_id: str) -> EntryStats:
+        """Return aggregate statistics for a device's tracking history."""
         ...
