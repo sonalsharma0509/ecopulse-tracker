@@ -6,10 +6,10 @@ import math
 
 import pytest
 from app.carbon import factors
-from app.carbon.calculator import calculate_footprint
+from app.carbon.calculator import compute_footprint
 from app.models import (
-    CarbonInput,
-    ConsumptionInput,
+    FootprintInput,
+    SpendingInput,
     HomeInput,
     TransportInput,
 )
@@ -17,7 +17,7 @@ from app.models import (
 
 def test_empty_input_produces_diet_only_footprint():
     # With no transport/home/consumption, the footprint is just the diet baseline.
-    result = calculate_footprint(CarbonInput(diet=factors.DietType.VEGAN))
+    result = compute_footprint(FootprintInput(diet=factors.DietType.VEGAN))
 
     assert result.breakdown_kg["transport"] == 0.0
     assert result.breakdown_kg["home"] == 0.0
@@ -29,8 +29,8 @@ def test_empty_input_produces_diet_only_footprint():
 
 
 def test_car_emissions_annualized_by_fuel():
-    result = calculate_footprint(
-        CarbonInput(
+    result = compute_footprint(
+        FootprintInput(
             transport=TransportInput(car_km_per_week=100, car_fuel=factors.CarFuel.PETROL),
             diet=factors.DietType.VEGAN,
         )
@@ -40,11 +40,11 @@ def test_car_emissions_annualized_by_fuel():
 
 
 def test_electric_car_lower_than_petrol():
-    petrol = calculate_footprint(
-        CarbonInput(transport=TransportInput(car_km_per_week=100, car_fuel=factors.CarFuel.PETROL))
+    petrol = compute_footprint(
+        FootprintInput(transport=TransportInput(car_km_per_week=100, car_fuel=factors.CarFuel.PETROL))
     )
-    electric = calculate_footprint(
-        CarbonInput(
+    electric = compute_footprint(
+        FootprintInput(
             transport=TransportInput(car_km_per_week=100, car_fuel=factors.CarFuel.ELECTRIC)
         )
     )
@@ -52,8 +52,8 @@ def test_electric_car_lower_than_petrol():
 
 
 def test_flights_use_representative_distances():
-    result = calculate_footprint(
-        CarbonInput(
+    result = compute_footprint(
+        FootprintInput(
             transport=TransportInput(short_haul_flights_per_year=2, long_haul_flights_per_year=1),
             diet=factors.DietType.VEGAN,
         )
@@ -66,20 +66,20 @@ def test_flights_use_representative_distances():
 
 
 def test_home_energy_split_by_household_size():
-    solo = calculate_footprint(
-        CarbonInput(home=HomeInput(electricity_kwh_per_month=300, household_size=1))
+    solo = compute_footprint(
+        FootprintInput(home=HomeInput(electricity_kwh_per_month=300, household_size=1))
     )
-    shared = calculate_footprint(
-        CarbonInput(home=HomeInput(electricity_kwh_per_month=300, household_size=3))
+    shared = compute_footprint(
+        FootprintInput(home=HomeInput(electricity_kwh_per_month=300, household_size=3))
     )
     # Shared household splits the same energy three ways → one-third per person.
     assert shared.breakdown_kg["home"] == pytest.approx(solo.breakdown_kg["home"] / 3)
 
 
 def test_consumption_combines_goods_and_waste():
-    result = calculate_footprint(
-        CarbonInput(
-            consumption=ConsumptionInput(goods_spend_usd_per_month=200, waste_kg_per_week=5),
+    result = compute_footprint(
+        FootprintInput(
+            consumption=SpendingInput(goods_spend_usd_per_month=200, waste_kg_per_week=5),
             diet=factors.DietType.VEGAN,
         )
     )
@@ -88,11 +88,11 @@ def test_consumption_combines_goods_and_waste():
 
 
 def test_total_is_sum_of_breakdown_and_tonnes_consistent():
-    result = calculate_footprint(
-        CarbonInput(
+    result = compute_footprint(
+        FootprintInput(
             transport=TransportInput(car_km_per_week=100),
             home=HomeInput(electricity_kwh_per_month=300),
-            consumption=ConsumptionInput(goods_spend_usd_per_month=100),
+            consumption=SpendingInput(goods_spend_usd_per_month=100),
         )
     )
     assert result.total_annual_kg == pytest.approx(sum(result.breakdown_kg.values()))
@@ -100,7 +100,7 @@ def test_total_is_sum_of_breakdown_and_tonnes_consistent():
 
 
 def test_comparison_ratios():
-    result = calculate_footprint(CarbonInput(diet=factors.DietType.VEGAN))
+    result = compute_footprint(FootprintInput(diet=factors.DietType.VEGAN))
     c = result.comparison
     assert c.ratio_to_global_average == pytest.approx(
         round(result.total_annual_kg / factors.GLOBAL_AVG_ANNUAL_KG, 3)
@@ -111,7 +111,7 @@ def test_comparison_ratios():
 
 
 def test_values_are_rounded_and_finite():
-    result = calculate_footprint(CarbonInput(transport=TransportInput(car_km_per_week=123.456)))
+    result = compute_footprint(FootprintInput(transport=TransportInput(car_km_per_week=123.456)))
     for v in result.breakdown_kg.values():
         assert math.isfinite(v)
         assert round(v, 2) == v

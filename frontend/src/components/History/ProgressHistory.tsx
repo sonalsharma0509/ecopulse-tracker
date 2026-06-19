@@ -1,12 +1,11 @@
-import type { Entry } from "../lib/types";
-import { formatDate, formatTonnes } from "../lib/format";
+import type { Entry } from "../../lib/types";
+import { formatDate, formatTonnes } from "../../lib/format";
 
 interface Props {
   entries: Entry[];
 }
 
-/** Tracking history: shows past footprint snapshots so users see their trend. */
-export function HistoryPanel({ entries }: Props) {
+export function ProgressHistory({ entries }: Props) {
   if (entries.length === 0) {
     return (
       <section className="card" aria-labelledby="history-heading">

@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../lib/api";
 import { getDeviceId } from "../lib/deviceId";
-import type { CarbonInput, Entry, FootprintResult, InsightsResponse } from "../lib/types";
+import type { FootprintInput, Entry, FootprintResult, InsightsResponse } from "../lib/types";
 
-/**
- * Owns all asynchronous application state: footprint calculation, insights,
- * saving entries, and history loading. Components stay presentational; this
- * hook is the single place that talks to the API.
- *
- * `status` carries polite screen-reader announcements (rendered in a
- * `role="status"` live region) so async outcomes are audible, not just visible.
- */
-export function useFootprint() {
+export function useEmissionTracker() {
   const [deviceId] = useState(getDeviceId);
   const [result, setResult] = useState<FootprintResult | null>(null);
-  const [lastInput, setLastInput] = useState<CarbonInput | null>(null);
+  const [lastInput, setLastInput] = useState<FootprintInput | null>(null);
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,7 +16,7 @@ export function useFootprint() {
 
   const loadHistory = useCallback(async () => {
     try {
-      setEntries(await api.listEntries(deviceId));
+      setEntries(await api.loadHistory(deviceId));
     } catch {
       // History is non-critical; fail silently rather than blocking the app.
     }
@@ -34,13 +26,12 @@ export function useFootprint() {
     void loadHistory();
   }, [loadHistory]);
 
-  /** Calculate the footprint and fetch personalized insights for the input. */
-  const calculate = async (input: CarbonInput) => {
+  const calculate = async (input: FootprintInput) => {
     setLoading(true);
     setError(null);
     setStatus("");
     try {
-      const [calc, ins] = await Promise.all([api.calculate(input), api.getInsights(input)]);
+      const [calc, ins] = await Promise.all([api.estimateFootprint(input), api.fetchAdvice(input)]);
       setResult(calc);
       setInsights(ins);
       setLastInput(input);
@@ -52,13 +43,12 @@ export function useFootprint() {
     }
   };
 
-  /** Persist the latest result to the device's history and refresh it. */
   const save = async () => {
     if (!result || !lastInput) return;
     setSaving(true);
     setError(null);
     try {
-      await api.saveEntry(deviceId, lastInput, result);
+      await api.storeEntry(deviceId, lastInput, result);
       await loadHistory();
       setStatus("Entry saved to your history.");
     } catch {

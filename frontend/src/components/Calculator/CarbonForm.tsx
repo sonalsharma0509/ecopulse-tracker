@@ -1,20 +1,18 @@
 import { useState } from "react";
-import { type CarbonInput, type CarFuel, type DietType, emptyInput } from "../lib/types";
-import { NumberField } from "./NumberField";
+import { type FootprintInput, type CarFuel, type DietType, emptyInput } from "../../lib/types";
+import { NumericInput } from "../shared/NumericInput";
 
 interface Props {
-  onSubmit: (input: CarbonInput) => void;
+  onSubmit: (input: FootprintInput) => void;
   loading: boolean;
 }
 
-// Input ceilings mirror the backend Pydantic bounds (app/models.py) so the
-// browser blocks out-of-range values before the API would reject them.
-const MAX_KM_WEEK = 20_000;
-const MAX_KWH_MONTH = 100_000;
-const MAX_FLIGHTS = 200;
-const MAX_USD_MONTH = 1_000_000;
-const MAX_WASTE_WEEK = 1_000;
-const MAX_HOUSEHOLD = 50;
+const WEEKLY_KM_LIMIT = 20_000;
+const MONTHLY_KWH_LIMIT = 100_000;
+const FLIGHT_COUNT_LIMIT = 200;
+const MONTHLY_SPEND_LIMIT = 1_000_000;
+const WEEKLY_WASTE_LIMIT = 1_000;
+const HOUSEHOLD_SIZE_LIMIT = 50;
 
 const DIET_OPTIONS: { value: DietType; label: string }[] = [
   { value: "heavy_meat", label: "Heavy meat eater" },
@@ -32,16 +30,14 @@ const FUEL_OPTIONS: { value: CarFuel; label: string }[] = [
   { value: "electric", label: "Electric" },
 ];
 
-/** Accessible footprint input form: labelled controls grouped in fieldsets. */
-export function CalculatorForm({ onSubmit, loading }: Props) {
-  const [input, setInput] = useState<CarbonInput>(emptyInput);
+export function CarbonForm({ onSubmit, loading }: Props) {
+  const [input, setInput] = useState<FootprintInput>(emptyInput);
 
-  // Type-safe section updaters — each patch is checked against the schema.
-  const patchTransport = (patch: Partial<CarbonInput["transport"]>) =>
+  const patchTransport = (patch: Partial<FootprintInput["transport"]>) =>
     setInput((p) => ({ ...p, transport: { ...p.transport, ...patch } }));
-  const patchHome = (patch: Partial<CarbonInput["home"]>) =>
+  const patchHome = (patch: Partial<FootprintInput["home"]>) =>
     setInput((p) => ({ ...p, home: { ...p.home, ...patch } }));
-  const patchConsumption = (patch: Partial<CarbonInput["consumption"]>) =>
+  const patchConsumption = (patch: Partial<FootprintInput["consumption"]>) =>
     setInput((p) => ({ ...p, consumption: { ...p.consumption, ...patch } }));
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,10 +51,10 @@ export function CalculatorForm({ onSubmit, loading }: Props) {
 
       <fieldset>
         <legend>Transport</legend>
-        <NumberField
+        <NumericInput
           id="car_km"
           label="Car distance per week (km)"
-          max={MAX_KM_WEEK}
+          max={WEEKLY_KM_LIMIT}
           value={input.transport.car_km_per_week}
           onChange={(v) => patchTransport({ car_km_per_week: v })}
         />
@@ -76,25 +72,25 @@ export function CalculatorForm({ onSubmit, loading }: Props) {
             ))}
           </select>
         </div>
-        <NumberField
+        <NumericInput
           id="transit_km"
           label="Public transit per week (km)"
-          max={MAX_KM_WEEK}
+          max={WEEKLY_KM_LIMIT}
           value={input.transport.public_transit_km_per_week}
           onChange={(v) => patchTransport({ public_transit_km_per_week: v })}
         />
-        <NumberField
+        <NumericInput
           id="short_flights"
           label="Short-haul flights per year"
-          max={MAX_FLIGHTS}
+          max={FLIGHT_COUNT_LIMIT}
           step={1}
           value={input.transport.short_haul_flights_per_year}
           onChange={(v) => patchTransport({ short_haul_flights_per_year: v })}
         />
-        <NumberField
+        <NumericInput
           id="long_flights"
           label="Long-haul flights per year"
-          max={MAX_FLIGHTS}
+          max={FLIGHT_COUNT_LIMIT}
           step={1}
           value={input.transport.long_haul_flights_per_year}
           onChange={(v) => patchTransport({ long_haul_flights_per_year: v })}
@@ -103,25 +99,25 @@ export function CalculatorForm({ onSubmit, loading }: Props) {
 
       <fieldset>
         <legend>Home energy</legend>
-        <NumberField
+        <NumericInput
           id="electricity"
           label="Electricity per month (kWh)"
-          max={MAX_KWH_MONTH}
+          max={MONTHLY_KWH_LIMIT}
           value={input.home.electricity_kwh_per_month}
           onChange={(v) => patchHome({ electricity_kwh_per_month: v })}
         />
-        <NumberField
+        <NumericInput
           id="gas"
           label="Natural gas per month (kWh)"
-          max={MAX_KWH_MONTH}
+          max={MONTHLY_KWH_LIMIT}
           value={input.home.natural_gas_kwh_per_month}
           onChange={(v) => patchHome({ natural_gas_kwh_per_month: v })}
         />
-        <NumberField
+        <NumericInput
           id="household"
           label="People in household"
           min={1}
-          max={MAX_HOUSEHOLD}
+          max={HOUSEHOLD_SIZE_LIMIT}
           step={1}
           hint="Home energy is shared across this many people."
           value={input.home.household_size}
@@ -145,17 +141,17 @@ export function CalculatorForm({ onSubmit, loading }: Props) {
             ))}
           </select>
         </div>
-        <NumberField
+        <NumericInput
           id="goods"
           label="Goods spending per month (USD)"
-          max={MAX_USD_MONTH}
+          max={MONTHLY_SPEND_LIMIT}
           value={input.consumption.goods_spend_usd_per_month}
           onChange={(v) => patchConsumption({ goods_spend_usd_per_month: v })}
         />
-        <NumberField
+        <NumericInput
           id="waste"
           label="Landfill waste per week (kg)"
-          max={MAX_WASTE_WEEK}
+          max={WEEKLY_WASTE_LIMIT}
           value={input.consumption.waste_kg_per_week}
           onChange={(v) => patchConsumption({ waste_kg_per_week: v })}
         />

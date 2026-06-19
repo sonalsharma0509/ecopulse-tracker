@@ -13,13 +13,13 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.models import CarbonInput, Entry, FootprintResult
+from app.models import FootprintInput, Entry, FootprintResult
 
 
 class EntryRepository(Protocol):
     """Stores and retrieves footprint entries scoped to an anonymous device id."""
 
-    def add(self, device_id: str, data: CarbonInput, result: FootprintResult) -> Entry:
+    def add(self, device_id: str, data: FootprintInput, result: FootprintResult) -> Entry:
         """Persist a new entry and return it (with id and timestamp)."""
         ...
 
@@ -27,7 +27,7 @@ class EntryRepository(Protocol):
         """Return a device's entries, newest first."""
         ...
 
-    async def async_add(self, device_id: str, data: CarbonInput, result: FootprintResult) -> Entry:
+    async def async_add(self, device_id: str, data: FootprintInput, result: FootprintResult) -> Entry:
         """Async variant of ``add``."""
         ...
 

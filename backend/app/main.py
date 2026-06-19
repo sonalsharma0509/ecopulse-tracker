@@ -45,7 +45,7 @@ _SECURITY_HEADERS = {
     ),
 }
 
-def _configure_logging() -> None:
+def _setup_logging() -> None:
     """Set up structured JSON logging for Cloud Logging indexability.
 
     Fields like ``endpoint``, ``latency_ms``, and ``source`` are logged as
@@ -67,7 +67,7 @@ def _configure_logging() -> None:
 
 def create_app() -> FastAPI:
     """Build the FastAPI application: middleware, routers, and SPA mount."""
-    _configure_logging()
+    _setup_logging()
     settings = get_settings()
     app = FastAPI(
         title="EcoPulse Carbon Tracker",
@@ -150,11 +150,11 @@ def create_app() -> FastAPI:
     app.include_router(calculate.router)
     app.include_router(entries.router)
 
-    _mount_spa(app)
+    _serve_static_assets(app)
     return app
 
 
-def _mount_spa(app: FastAPI) -> None:
+def _serve_static_assets(app: FastAPI) -> None:
     """Serve the built SPA (if present) with client-side-routing fallback."""
     if not _STATIC_DIR.exists():
         return

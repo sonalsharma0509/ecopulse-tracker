@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
-import { InsightsPanel } from "./InsightsPanel";
+import { AdvicePanel } from "./AdvicePanel";
 import type { InsightsResponse } from "../lib/types";
 
 const baseInsights: InsightsResponse = {
@@ -13,24 +13,24 @@ const baseInsights: InsightsResponse = {
   source: "gemini",
 };
 
-describe("InsightsPanel", () => {
+describe("AdvicePanel", () => {
   it("has no accessibility violations", async () => {
-    const { container } = render(<InsightsPanel insights={baseInsights} />);
+    const { container } = render(<AdvicePanel insights={baseInsights} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it("labels AI-generated insights as such", () => {
-    render(<InsightsPanel insights={baseInsights} />);
+    render(<AdvicePanel insights={baseInsights} />);
     expect(screen.getByText("AI-personalized")).toBeInTheDocument();
   });
 
   it("labels rule-based insights as smart rules", () => {
-    render(<InsightsPanel insights={{ ...baseInsights, source: "rules" }} />);
+    render(<AdvicePanel insights={{ ...baseInsights, source: "rules" }} />);
     expect(screen.getByText("Smart rules")).toBeInTheDocument();
   });
 
   it("renders the summary and every recommendation with its saving", () => {
-    render(<InsightsPanel insights={baseInsights} />);
+    render(<AdvicePanel insights={baseInsights} />);
     expect(screen.getByText(baseInsights.summary)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByText(/take the train/i)).toBeInTheDocument();

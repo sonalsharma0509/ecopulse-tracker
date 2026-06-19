@@ -10,7 +10,7 @@ export type DietType =
   | "vegetarian"
   | "vegan";
 
-export interface CarbonInput {
+export interface FootprintInput {
   transport: {
     car_km_per_week: number;
     car_fuel: CarFuel;
@@ -60,12 +60,12 @@ export interface Entry {
   id: string;
   created_at: string;
   device_id: string;
-  input: CarbonInput;
+  input: FootprintInput;
   result: FootprintResult;
 }
 
 /** A fresh, all-zero input with sensible defaults (average diet, petrol car). */
-export const emptyInput = (): CarbonInput => ({
+export const emptyInput = (): FootprintInput => ({
   transport: {
     car_km_per_week: 0,
     car_fuel: "petrol",

@@ -1,16 +1,12 @@
-import { CalculatorForm } from "./components/CalculatorForm";
-import { ResultBreakdown } from "./components/ResultBreakdown";
-import { InsightsPanel } from "./components/InsightsPanel";
-import { HistoryPanel } from "./components/HistoryPanel";
-import { useFootprint } from "./hooks/useFootprint";
+import { CarbonForm } from "./components/Calculator/CarbonForm";
+import { FootprintReport } from "./components/Calculator/FootprintReport";
+import { AdvicePanel } from "./components/Insights/AdvicePanel";
+import { ProgressHistory } from "./components/History/ProgressHistory";
+import { useEmissionTracker } from "./hooks/useEmissionTracker";
 
-/**
- * Application shell: composes the calculator, results, insights, and history
- * panels around the `useFootprint` hook, which owns all async state.
- */
 export default function App() {
   const { result, insights, entries, loading, saving, error, status, calculate, save } =
-    useFootprint();
+    useEmissionTracker();
 
   return (
     <>
@@ -23,7 +19,7 @@ export default function App() {
       </header>
 
       <main id="main">
-        <CalculatorForm onSubmit={calculate} loading={loading} />
+        <CarbonForm onSubmit={calculate} loading={loading} />
 
         <div role="alert" aria-live="assertive">
           {error && <p className="error">{error}</p>}
@@ -34,8 +30,8 @@ export default function App() {
 
         {result && (
           <>
-            <ResultBreakdown result={result} />
-            {insights && <InsightsPanel insights={insights} />}
+            <FootprintReport result={result} />
+            {insights && <AdvicePanel insights={insights} />}
             <div className="card">
               <button className="btn secondary" onClick={save} disabled={saving} aria-busy={saving}>
                 {saving ? "Saving…" : "Save this entry to my history"}
@@ -44,7 +40,7 @@ export default function App() {
           </>
         )}
 
-        <HistoryPanel entries={entries} />
+        <ProgressHistory entries={entries} />
       </main>
     </>
   );

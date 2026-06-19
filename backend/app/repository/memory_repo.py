@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from app.models import CarbonInput, Entry, FootprintResult
+from app.models import FootprintInput, Entry, FootprintResult
 
 
 class InMemoryEntryRepository:
@@ -21,7 +21,7 @@ class InMemoryEntryRepository:
         """Start with an empty per-device store."""
         self._by_device: dict[str, list[Entry]] = {}
 
-    def add(self, device_id: str, data: CarbonInput, result: FootprintResult) -> Entry:
+    def add(self, device_id: str, data: FootprintInput, result: FootprintResult) -> Entry:
         """Persist a new entry for the device and return it with id/timestamp."""
         entry = Entry(
             id=uuid.uuid4().hex,
@@ -39,7 +39,7 @@ class InMemoryEntryRepository:
         # Newest first.
         return sorted(entries, key=lambda e: e.created_at, reverse=True)[:limit]
 
-    async def async_add(self, device_id: str, data: CarbonInput, result: FootprintResult) -> Entry:
+    async def async_add(self, device_id: str, data: FootprintInput, result: FootprintResult) -> Entry:
         """Async wrapper — in-memory ops are instant, no thread needed."""
         return self.add(device_id, data, result)
 

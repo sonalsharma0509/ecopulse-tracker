@@ -1,11 +1,11 @@
 """Personalized insights via Google Gemini on Vertex AI.
 
 Design principle: **graceful degradation**. The public entry point,
-``generate_insights``, attempts a Gemini call when enabled and *always* falls
+``fetch_recommendations``, attempts a Gemini call when enabled and *always* falls
 back to the deterministic rule-based engine on any error (disabled flag, missing
 credentials, network/quota failure, malformed response, validation failure). The
 platform therefore never fails to give the user advice, and every code path is
-testable without GCP by toggling settings or patching ``_call_gemini``.
+testable without GCP by toggling settings or patching ``_query_ai_model``.
 
 Authentication uses Application Default Credentials (the Cloud Run service
 account in production) — there is no API key in the codebase.
@@ -38,34 +38,34 @@ from cachetools import TTLCache
 import yaml
 
 from app.config import Settings
-from app.insights.rules import generate_rule_based_insights
-from app.models import CarbonInput, FootprintResult, InsightsResponse, Recommendation
+from app.insights.rules import build_rule_based_recommendations
+from app.models import FootprintInput, FootprintResult, InsightsResponse, Recommendation
 
 logger = logging.getLogger(__name__)
 
 # Known emission categories — used to validate Gemini's output.
-_KNOWN_CATEGORIES = frozenset({"transport", "home", "diet", "consumption"})
+_VALID_CATEGORIES = frozenset({"transport", "home", "diet", "consumption"})
 
 # Maximum allowed summary length from Gemini (guard against bloated output).
-_MAX_SUMMARY_LENGTH = 1000
+_SUMMARY_CHAR_LIMIT = 1000
 
 # Directory containing versioned prompt YAML files.
-_PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+_PROMPT_FOLDER = Path(__file__).resolve().parent / "prompts"
 
 # TTL cache for insights responses — avoids duplicate Gemini calls when a user
 # re-submits identical data within 60 seconds.  Thread-safe via a lock.
-_INSIGHTS_CACHE: TTLCache = TTLCache(maxsize=256, ttl=60)
-_CACHE_LOCK = threading.Lock()
+_RECOMMENDATION_CACHE: TTLCache = TTLCache(maxsize=256, ttl=60)
+_CACHE_MUTEX = threading.Lock()
 
 
 @lru_cache
-def _load_prompt_config(version: str) -> dict:
+def _load_prompt_settings(version: str) -> dict:
     """Load and cache the prompt configuration from a versioned YAML file.
 
     Falls back to the inline defaults if the file is missing, so the system
     keeps working even if the prompt directory is absent (e.g. in tests).
     """
-    path = _PROMPTS_DIR / f"{version}.yaml"
+    path = _PROMPT_FOLDER / f"{version}.yaml"
     if path.exists():
         with open(path, encoding="utf-8") as f:
             return yaml.safe_load(f)
@@ -73,7 +73,7 @@ def _load_prompt_config(version: str) -> dict:
     return {}
 
 
-def _get_system_instruction(config: dict) -> str:
+def _fetch_system_prompt(config: dict) -> str:
     return config.get(
         "system_instruction",
         "You are a concise, encouraging sustainability coach. Given a person's annual "
@@ -83,7 +83,7 @@ def _get_system_instruction(config: dict) -> str:
     )
 
 
-def _get_response_schema(config: dict) -> dict:
+def _fetch_output_schema(config: dict) -> dict:
     return config.get("response_schema", {
         "type": "object",
         "properties": {
@@ -105,7 +105,7 @@ def _get_response_schema(config: dict) -> dict:
     })
 
 
-def _build_prompt(data: CarbonInput, result: FootprintResult) -> str:
+def _construct_prompt(data: FootprintInput, result: FootprintResult) -> str:
     return (
         "Carbon footprint breakdown (kg CO2e per year):\n"
         f"{json.dumps(result.breakdown_kg)}\n"
@@ -116,7 +116,7 @@ def _build_prompt(data: CarbonInput, result: FootprintResult) -> str:
     )
 
 
-def _validate_gemini_response(
+def _sanitize_ai_output(
     payload: dict, total_annual_kg: float
 ) -> None:
     """Validate Gemini's parsed JSON output beyond structural correctness.
@@ -126,14 +126,14 @@ def _validate_gemini_response(
     catches the error and falls back to the rule-based engine.
     """
     summary = payload.get("summary", "")
-    if len(summary) > _MAX_SUMMARY_LENGTH:
+    if len(summary) > _SUMMARY_CHAR_LIMIT:
         raise ValueError(
-            f"Gemini summary too long ({len(summary)} chars, max {_MAX_SUMMARY_LENGTH})"
+            f"Gemini summary too long ({len(summary)} chars, max {_SUMMARY_CHAR_LIMIT})"
         )
 
     for rec in payload.get("recommendations", []):
         category = rec.get("category", "")
-        if category not in _KNOWN_CATEGORIES:
+        if category not in _VALID_CATEGORIES:
             raise ValueError(f"Unknown category from Gemini: {category!r}")
 
         savings = rec.get("estimated_annual_savings_kg", 0)
@@ -146,7 +146,7 @@ def _validate_gemini_response(
 
 
 @lru_cache
-def _get_gemini_client(project_id: str, region: str):
+def _initialize_ai_client(project_id: str, region: str):
     """Return a cached Gemini client (avoids re-initializing credentials per call).
 
     Imported lazily so the SDK/credentials are only required when actually used —
@@ -157,8 +157,8 @@ def _get_gemini_client(project_id: str, region: str):
     return genai.Client(vertexai=True, project=project_id, location=region)
 
 
-def _call_gemini(
-    data: CarbonInput, result: FootprintResult, settings: Settings
+def _query_ai_model(
+    data: FootprintInput, result: FootprintResult, settings: Settings
 ) -> InsightsResponse:
     """Invoke Gemini on Vertex AI and parse a validated structured response.
 
@@ -168,16 +168,16 @@ def _call_gemini(
     """
     from google.genai import types
 
-    prompt_config = _load_prompt_config(settings.gemini_prompt_version)
+    prompt_config = _load_prompt_settings(settings.gemini_prompt_version)
 
-    client = _get_gemini_client(settings.project_id, settings.region)
+    client = _initialize_ai_client(settings.project_id, settings.region)
     response = client.models.generate_content(
         model=settings.gemini_model,
-        contents=_build_prompt(data, result),
+        contents=_construct_prompt(data, result),
         config=types.GenerateContentConfig(
-            system_instruction=_get_system_instruction(prompt_config),
+            system_instruction=_fetch_system_prompt(prompt_config),
             response_mime_type="application/json",
-            response_schema=_get_response_schema(prompt_config),
+            response_schema=_fetch_output_schema(prompt_config),
             temperature=prompt_config.get("temperature", 0.4),
             max_output_tokens=prompt_config.get("max_output_tokens", 4096),
         ),
@@ -186,7 +186,7 @@ def _call_gemini(
 
     # Validate Gemini output before trusting it — guards against hallucinated
     # or adversarial values (e.g. savings larger than total footprint).
-    _validate_gemini_response(payload, result.total_annual_kg)
+    _sanitize_ai_output(payload, result.total_annual_kg)
 
     recommendations = [
         Recommendation(
@@ -205,13 +205,13 @@ def _call_gemini(
     )
 
 
-def _cache_key(data: CarbonInput) -> str:
+def _build_cache_key(data: FootprintInput) -> str:
     """Deterministic cache key from the input (SHA-256 of the serialised JSON)."""
     return hashlib.sha256(data.model_dump_json().encode()).hexdigest()
 
 
-async def generate_insights(
-    data: CarbonInput, result: FootprintResult, settings: Settings,
+async def fetch_recommendations(
+    data: FootprintInput, result: FootprintResult, settings: Settings,
     device_id: str = "",
 ) -> InsightsResponse:
     """Return personalized insights, preferring Gemini and falling back to rules.
@@ -226,9 +226,9 @@ async def generate_insights(
     id_hash = hashlib.sha256(device_id.encode()).hexdigest()[:12] if device_id else "anon"
 
     # ── Cache check ──────────────────────────────────────────────────
-    cache_key = _cache_key(data)
-    with _CACHE_LOCK:
-        cached = _INSIGHTS_CACHE.get(cache_key)
+    cache_key = _build_cache_key(data)
+    with _CACHE_MUTEX:
+        cached = _RECOMMENDATION_CACHE.get(cache_key)
     if cached is not None:
         _log_insight(start, "cache", id_hash)
         return InsightsResponse(
@@ -239,27 +239,27 @@ async def generate_insights(
 
     # ── Rules-only path ──────────────────────────────────────────────
     if not settings.use_gemini:
-        resp = generate_rule_based_insights(data, result)
-        with _CACHE_LOCK:
-            _INSIGHTS_CACHE[cache_key] = resp
+        resp = build_rule_based_recommendations(data, result)
+        with _CACHE_MUTEX:
+            _RECOMMENDATION_CACHE[cache_key] = resp
         _log_insight(start, resp.source, id_hash)
         return resp
 
     # ── Gemini path (with rules fallback) ────────────────────────────
     try:
-        resp = await asyncio.to_thread(_call_gemini, data, result, settings)
+        resp = await asyncio.to_thread(_query_ai_model, data, result, settings)
     except Exception as exc:  # deliberately broad: any failure must degrade gracefully
         logger.warning(
             "Gemini insight generation failed, using rule-based fallback",
             extra={"error": str(exc), "device_id_hash": id_hash},
         )
-        resp = generate_rule_based_insights(data, result)
+        resp = build_rule_based_recommendations(data, result)
         _log_insight(start, resp.source, id_hash, fallback=True)
         return resp
 
     # Store successful result in cache.
-    with _CACHE_LOCK:
-        _INSIGHTS_CACHE[cache_key] = resp
+    with _CACHE_MUTEX:
+        _RECOMMENDATION_CACHE[cache_key] = resp
     _log_insight(start, resp.source, id_hash)
     return resp
 
