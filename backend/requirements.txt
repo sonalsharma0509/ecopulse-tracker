@@ -1,7 +1,7 @@
 # Runtime dependencies (pinned for reproducible, auditable builds).
 # Supply-chain note: for maximum security, generate hashes via
 # `pip-compile --generate-hashes` and install with `pip install --require-hashes`.
-fastapi==0.115.6
+fastapi==0.137.2
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
