@@ -11,16 +11,16 @@ from __future__ import annotations
 
 from app.carbon import factors
 from app.models import (
-    CarbonInput,
+    FootprintInput,
     Comparison,
-    ConsumptionInput,
+    SpendingInput,
     FootprintResult,
     HomeInput,
     TransportInput,
 )
 
 
-def _transport_annual_kg(t: TransportInput) -> float:
+def _estimate_transport_emissions(t: TransportInput) -> float:
     car = t.car_km_per_week * factors.WEEKS_PER_YEAR * factors.CAR_FACTORS_PER_KM[t.car_fuel]
     transit = t.public_transit_km_per_week * factors.WEEKS_PER_YEAR * factors.PUBLIC_TRANSIT_PER_KM
     flights = (
@@ -32,7 +32,7 @@ def _transport_annual_kg(t: TransportInput) -> float:
     return car + transit + flights
 
 
-def _home_annual_kg(h: HomeInput) -> float:
+def _estimate_home_emissions(h: HomeInput) -> float:
     electricity = (
         h.electricity_kwh_per_month * factors.MONTHS_PER_YEAR * factors.ELECTRICITY_PER_KWH
     )
@@ -41,19 +41,19 @@ def _home_annual_kg(h: HomeInput) -> float:
     return (electricity + gas) / h.household_size
 
 
-def _consumption_annual_kg(c: ConsumptionInput) -> float:
+def _estimate_consumption_emissions(c: SpendingInput) -> float:
     goods = c.goods_spend_usd_per_month * factors.MONTHS_PER_YEAR * factors.GOODS_PER_USD_MONTHLY
     waste = c.waste_kg_per_week * factors.WEEKS_PER_YEAR * factors.WASTE_PER_KG
     return goods + waste
 
 
-def calculate_footprint(data: CarbonInput) -> FootprintResult:
+def compute_footprint(data: FootprintInput) -> FootprintResult:
     """Compute the annual carbon footprint breakdown for a set of inputs."""
     breakdown = {
-        "transport": round(_transport_annual_kg(data.transport), 2),
-        "home": round(_home_annual_kg(data.home), 2),
+        "transport": round(_estimate_transport_emissions(data.transport), 2),
+        "home": round(_estimate_home_emissions(data.home), 2),
         "diet": round(factors.DIET_ANNUAL_KG[data.diet], 2),
-        "consumption": round(_consumption_annual_kg(data.consumption), 2),
+        "consumption": round(_estimate_consumption_emissions(data.consumption), 2),
     }
     total = round(sum(breakdown.values()), 2)
 

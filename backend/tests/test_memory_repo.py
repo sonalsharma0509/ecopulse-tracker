@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from app.carbon.calculator import calculate_footprint
-from app.models import CarbonInput
+from app.carbon.calculator import compute_footprint
+from app.models import FootprintInput
 from app.repository.memory_repo import InMemoryEntryRepository
 
 
 def _make(repo, device_id):
-    data = CarbonInput()
-    return repo.add(device_id, data, calculate_footprint(data))
+    data = FootprintInput()
+    return repo.add(device_id, data, compute_footprint(data))
 
 
 def test_add_returns_entry_with_id_and_timestamp():

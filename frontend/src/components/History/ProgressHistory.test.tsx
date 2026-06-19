@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
-import { HistoryPanel } from "./HistoryPanel";
+import { ProgressHistory } from "./ProgressHistory";
 import type { Entry, FootprintResult } from "../lib/types";
 
 function makeEntry(id: string, createdAt: string, tonnes: number): Entry {
@@ -25,18 +25,18 @@ function makeEntry(id: string, createdAt: string, tonnes: number): Entry {
   };
 }
 
-describe("HistoryPanel", () => {
+describe("ProgressHistory", () => {
   it("has no accessibility violations with entries", async () => {
     const entries = [
       makeEntry("e2", "2026-02-01T10:00:00Z", 4.2),
       makeEntry("e1", "2026-01-01T10:00:00Z", 5.0),
     ];
-    const { container } = render(<HistoryPanel entries={entries} />);
+    const { container } = render(<ProgressHistory entries={entries} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it("shows an inviting empty state when there are no entries", () => {
-    render(<HistoryPanel entries={[]} />);
+    render(<ProgressHistory entries={[]} />);
     expect(screen.getByText(/no saved entries yet/i)).toBeInTheDocument();
   });
 
@@ -45,7 +45,7 @@ describe("HistoryPanel", () => {
       makeEntry("e2", "2026-02-01T10:00:00Z", 4.0),
       makeEntry("e1", "2026-01-01T10:00:00Z", 5.0),
     ];
-    render(<HistoryPanel entries={entries} />);
+    render(<ProgressHistory entries={entries} />);
     expect(screen.getByText(/down 1 t since your last entry/i)).toBeInTheDocument();
   });
 
@@ -54,7 +54,7 @@ describe("HistoryPanel", () => {
       makeEntry("e2", "2026-02-01T10:00:00Z", 6.0),
       makeEntry("e1", "2026-01-01T10:00:00Z", 5.0),
     ];
-    render(<HistoryPanel entries={entries} />);
+    render(<ProgressHistory entries={entries} />);
     expect(screen.getByText(/up 1 t since your last entry/i)).toBeInTheDocument();
   });
 
@@ -63,7 +63,7 @@ describe("HistoryPanel", () => {
       makeEntry("e2", "2026-02-01T10:00:00Z", 5.0),
       makeEntry("e1", "2026-01-01T10:00:00Z", 5.0),
     ];
-    render(<HistoryPanel entries={entries} />);
+    render(<ProgressHistory entries={entries} />);
     expect(screen.getByText(/no change since your last entry/i)).toBeInTheDocument();
   });
 
@@ -73,7 +73,7 @@ describe("HistoryPanel", () => {
       makeEntry("e2", "2026-02-01T10:00:00Z", 4.5),
       makeEntry("e1", "2026-01-01T10:00:00Z", 5.0),
     ];
-    render(<HistoryPanel entries={entries} />);
+    render(<ProgressHistory entries={entries} />);
     // One header row plus one row per entry.
     expect(screen.getAllByRole("row")).toHaveLength(4);
   });

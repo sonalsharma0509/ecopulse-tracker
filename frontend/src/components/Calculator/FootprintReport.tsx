@@ -1,16 +1,11 @@
-import type { FootprintResult } from "../lib/types";
-import { categoryLabel, formatKg, formatTonnes } from "../lib/format";
+import type { FootprintResult } from "../../lib/types";
+import { categoryLabel, formatKg, formatTonnes } from "../../lib/format";
 
 interface Props {
   result: FootprintResult;
 }
 
-/**
- * Shows the total footprint and a per-category bar chart. The chart is built
- * from semantic markup with text values beside each bar, so it is fully
- * understandable without color or vision (no canvas, no color-only encoding).
- */
-export function ResultBreakdown({ result }: Props) {
+export function FootprintReport({ result }: Props) {
   const entries = Object.entries(result.breakdown_kg);
   const max = Math.max(1, ...entries.map(([, v]) => v));
   const overTarget = result.comparison.ratio_to_sustainable_target > 1;
@@ -56,7 +51,6 @@ export function ResultBreakdown({ result }: Props) {
         ))}
       </div>
 
-      {/* Accessible data table equivalent of the chart. */}
       <table className="history">
         <caption className="visually-hidden">Annual emissions by category in kg CO2e</caption>
         <thead>

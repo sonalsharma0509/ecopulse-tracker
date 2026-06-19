@@ -7,10 +7,10 @@ import type { FootprintResult, InsightsResponse } from "./lib/types";
 
 // Mock the API layer so the integration test runs without a backend.
 vi.mock("./lib/api", () => ({
-  calculate: vi.fn(),
-  getInsights: vi.fn(),
-  saveEntry: vi.fn(),
-  listEntries: vi.fn(),
+  estimateFootprint: vi.fn(),
+  fetchAdvice: vi.fn(),
+  storeEntry: vi.fn(),
+  loadHistory: vi.fn(),
 }));
 
 import * as api from "./lib/api";
@@ -37,10 +37,10 @@ const insights: InsightsResponse = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(api.listEntries).mockResolvedValue([]);
-  vi.mocked(api.calculate).mockResolvedValue(result);
-  vi.mocked(api.getInsights).mockResolvedValue(insights);
-  vi.mocked(api.saveEntry).mockResolvedValue({
+  vi.mocked(api.loadHistory).mockResolvedValue([]);
+  vi.mocked(api.estimateFootprint).mockResolvedValue(result);
+  vi.mocked(api.fetchAdvice).mockResolvedValue(insights);
+  vi.mocked(api.storeEntry).mockResolvedValue({
     id: "e1",
     created_at: new Date().toISOString(),
     device_id: "dev-123",
@@ -52,7 +52,7 @@ beforeEach(() => {
 /** Render the app and wait for the initial history load to settle. */
 async function renderApp() {
   const view = render(<App />);
-  await waitFor(() => expect(api.listEntries).toHaveBeenCalled());
+  await waitFor(() => expect(api.loadHistory).toHaveBeenCalled());
   return view;
 }
 
@@ -69,7 +69,7 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByText(/your estimated footprint/i)).toBeInTheDocument());
     expect(screen.getByRole("heading", { name: /personalized insights/i })).toBeInTheDocument();
     expect(screen.getByText(/drive less/i)).toBeInTheDocument();
-    expect(api.calculate).toHaveBeenCalledTimes(1);
+    expect(api.estimateFootprint).toHaveBeenCalledTimes(1);
   });
 
   it("announces readiness to screen readers via the status live region", async () => {
@@ -86,14 +86,14 @@ describe("App", () => {
     await waitFor(() => screen.getByRole("button", { name: /save this entry/i }));
     await userEvent.click(screen.getByRole("button", { name: /save this entry/i }));
 
-    await waitFor(() => expect(api.saveEntry).toHaveBeenCalledTimes(1));
-    // listEntries: once on mount, once after save.
-    expect(api.listEntries).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(api.storeEntry).toHaveBeenCalledTimes(1));
+    // loadHistory: once on mount, once after save.
+    expect(api.loadHistory).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/entry saved/i));
   });
 
   it("shows an error message when calculation fails", async () => {
-    vi.mocked(api.calculate).mockRejectedValueOnce(new Error("boom"));
+    vi.mocked(api.estimateFootprint).mockRejectedValueOnce(new Error("boom"));
     await renderApp();
     await userEvent.click(screen.getByRole("button", { name: /calculate my footprint/i }));
     await waitFor(() =>
@@ -102,7 +102,7 @@ describe("App", () => {
   });
 
   it("shows an error message when saving fails", async () => {
-    vi.mocked(api.saveEntry).mockRejectedValueOnce(new Error("boom"));
+    vi.mocked(api.storeEntry).mockRejectedValueOnce(new Error("boom"));
     await renderApp();
     await userEvent.click(screen.getByRole("button", { name: /calculate my footprint/i }));
     await waitFor(() => screen.getByRole("button", { name: /save this entry/i }));

@@ -2,14 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
-import { NumberField } from "./NumberField";
+import { NumericInput } from "./NumericInput";
 
-describe("NumberField", () => {
+describe("NumericInput", () => {
   it("has no accessibility violations (with and without a hint)", async () => {
     const { container } = render(
       <>
-        <NumberField id="plain" label="Plain" max={10} value={0} onChange={() => {}} />
-        <NumberField
+        <NumericInput id="plain" label="Plain" max={10} value={0} onChange={() => {}} />
+        <NumericInput
           id="hinted"
           label="Hinted"
           max={10}
@@ -24,7 +24,7 @@ describe("NumberField", () => {
 
   it("emits numeric values through onChange", async () => {
     const onChange = vi.fn();
-    render(<NumberField id="n" label="Amount" max={100} value={0} onChange={onChange} />);
+    render(<NumericInput id="n" label="Amount" max={100} value={0} onChange={onChange} />);
     await userEvent.type(screen.getByLabelText("Amount"), "7");
     expect(onChange).toHaveBeenLastCalledWith(7);
   });
@@ -32,8 +32,8 @@ describe("NumberField", () => {
   it("associates the hint via aria-describedby only when present", () => {
     render(
       <>
-        <NumberField id="a" label="With hint" max={10} hint="Hint." value={0} onChange={() => {}} />
-        <NumberField id="b" label="No hint" max={10} value={0} onChange={() => {}} />
+        <NumericInput id="a" label="With hint" max={10} hint="Hint." value={0} onChange={() => {}} />
+        <NumericInput id="b" label="No hint" max={10} value={0} onChange={() => {}} />
       </>,
     );
     expect(screen.getByLabelText("With hint")).toHaveAccessibleDescription("Hint.");
@@ -42,7 +42,7 @@ describe("NumberField", () => {
 
   it("renders browser-level bounds and integer steps when requested", () => {
     render(
-      <NumberField id="i" label="Count" min={1} max={50} step={1} value={1} onChange={() => {}} />,
+      <NumericInput id="i" label="Count" min={1} max={50} step={1} value={1} onChange={() => {}} />,
     );
     const input = screen.getByLabelText("Count");
     expect(input).toHaveAttribute("min", "1");

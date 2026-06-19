@@ -11,15 +11,15 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from app.carbon.calculator import calculate_footprint
+from app.carbon.calculator import compute_footprint
 from app.config import Settings
 from app.insights import gemini
-from app.models import CarbonInput, InsightsResponse, Recommendation
+from app.models import FootprintInput, InsightsResponse, Recommendation
 
 
 def _ctx():
-    data = CarbonInput()
-    return data, calculate_footprint(data)
+    data = FootprintInput()
+    return data, compute_footprint(data)
 
 
 def _fake_genai_client(response_text: str):
@@ -38,7 +38,7 @@ def _fake_genai_client(response_text: str):
 async def test_disabled_gemini_uses_rules():
     gemini._INSIGHTS_CACHE.clear()
     data, result = _ctx()
-    resp = await gemini.generate_insights(data, result, Settings(use_gemini=False))
+    resp = await gemini.fetch_recommendations(data, result, Settings(use_gemini=False))
     assert resp.source == "rules"
 
 
@@ -50,7 +50,7 @@ async def test_gemini_failure_falls_back_to_rules(monkeypatch):
 
     monkeypatch.setattr(gemini, "_call_gemini", boom)
     data, result = _ctx()
-    resp = await gemini.generate_insights(data, result, Settings(use_gemini=True))
+    resp = await gemini.fetch_recommendations(data, result, Settings(use_gemini=True))
     assert resp.source == "rules"
     assert resp.recommendations  # fallback still produces advice
 
@@ -90,7 +90,7 @@ async def test_empty_gemini_recommendations_fall_back_to_rules(monkeypatch):
     monkeypatch.setattr("google.genai.Client", _fake_genai_client(json.dumps(payload)))
     gemini._get_gemini_client.cache_clear()
     data, result = _ctx()
-    resp = await gemini.generate_insights(data, result, Settings(use_gemini=True))
+    resp = await gemini.fetch_recommendations(data, result, Settings(use_gemini=True))
     assert resp.source == "rules"
     gemini._get_gemini_client.cache_clear()
 
@@ -101,7 +101,7 @@ async def test_malformed_gemini_json_falls_back_to_rules(monkeypatch):
     monkeypatch.setattr("google.genai.Client", _fake_genai_client("not valid json {"))
     gemini._get_gemini_client.cache_clear()
     data, result = _ctx()
-    resp = await gemini.generate_insights(data, result, Settings(use_gemini=True))
+    resp = await gemini.fetch_recommendations(data, result, Settings(use_gemini=True))
     assert resp.source == "rules"
     assert resp.recommendations
     gemini._get_gemini_client.cache_clear()
@@ -121,7 +121,7 @@ async def test_gemini_success_path(monkeypatch):
     )
     monkeypatch.setattr(gemini, "_call_gemini", lambda *_a, **_k: canned)
     data, result = _ctx()
-    resp = await gemini.generate_insights(data, result, Settings(use_gemini=True))
+    resp = await gemini.fetch_recommendations(data, result, Settings(use_gemini=True))
     assert resp.source in ("gemini", "cache")
     assert resp.summary == "Great progress!"
 
@@ -198,7 +198,7 @@ async def test_validation_failure_triggers_rules_fallback(monkeypatch):
     monkeypatch.setattr("google.genai.Client", _fake_genai_client(json.dumps(bad_payload)))
     gemini._get_gemini_client.cache_clear()
     data, result = _ctx()
-    resp = await gemini.generate_insights(data, result, Settings(use_gemini=True))
+    resp = await gemini.fetch_recommendations(data, result, Settings(use_gemini=True))
     assert resp.source == "rules"  # fell back because validation failed
     gemini._get_gemini_client.cache_clear()
     gemini._INSIGHTS_CACHE.clear()
@@ -236,10 +236,10 @@ async def test_insights_cache_returns_cached_result():
     data, result = _ctx()
     settings = Settings(use_gemini=False)
 
-    resp1 = await gemini.generate_insights(data, result, settings)
+    resp1 = await gemini.fetch_recommendations(data, result, settings)
     assert resp1.source == "rules"
 
-    resp2 = await gemini.generate_insights(data, result, settings)
+    resp2 = await gemini.fetch_recommendations(data, result, settings)
     assert resp2.source == "cache"
     assert resp2.summary == resp1.summary
     assert resp2.recommendations == resp1.recommendations
@@ -250,17 +250,17 @@ async def test_insights_cache_returns_cached_result():
 async def test_insights_cache_miss_on_different_input():
     """Different input data should not hit the cache."""
     gemini._INSIGHTS_CACHE.clear()
-    data1 = CarbonInput()
-    result1 = calculate_footprint(data1)
+    data1 = FootprintInput()
+    result1 = compute_footprint(data1)
     settings = Settings(use_gemini=False)
 
-    await gemini.generate_insights(data1, result1, settings)
+    await gemini.fetch_recommendations(data1, result1, settings)
 
     # Different input (heavy meat diet).
     from app.carbon.factors import DietType
-    data2 = CarbonInput(diet=DietType.HEAVY_MEAT)
-    result2 = calculate_footprint(data2)
+    data2 = FootprintInput(diet=DietType.HEAVY_MEAT)
+    result2 = compute_footprint(data2)
 
-    resp2 = await gemini.generate_insights(data2, result2, settings)
+    resp2 = await gemini.fetch_recommendations(data2, result2, settings)
     assert resp2.source == "rules"  # cache miss → fresh rules call
     gemini._INSIGHTS_CACHE.clear()

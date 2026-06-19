@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 from app.carbon import factors
-from app.carbon.calculator import calculate_footprint
+from app.carbon.calculator import compute_footprint
 from app.insights.gemini import _load_prompt_config
-from app.insights.rules import generate_rule_based_insights
-from app.models import CarbonInput, ConsumptionInput, HomeInput, TransportInput
+from app.insights.rules import build_rule_based_recommendations
+from app.models import FootprintInput, SpendingInput, HomeInput, TransportInput
 
 
 @pytest.fixture(autouse=True)
@@ -45,34 +45,34 @@ def test_prompt_config_is_cached():
 
 def test_profile_heavy_driver_gets_transport_first():
     """A user who drives 500 km/week in a petrol car: transport dominates."""
-    data = CarbonInput(
+    data = FootprintInput(
         transport=TransportInput(car_km_per_week=500, car_fuel=factors.CarFuel.PETROL),
         diet=factors.DietType.VEGAN,
     )
-    result = calculate_footprint(data)
-    insights = generate_rule_based_insights(data, result)
+    result = compute_footprint(data)
+    insights = build_rule_based_recommendations(data, result)
     assert insights.recommendations[0].category == "transport"
 
 
 def test_profile_heavy_consumer_gets_consumption_addressed():
     """A user with high goods spending and waste: consumption must appear."""
-    data = CarbonInput(
-        consumption=ConsumptionInput(goods_spend_usd_per_month=1500, waste_kg_per_week=30),
+    data = FootprintInput(
+        consumption=SpendingInput(goods_spend_usd_per_month=1500, waste_kg_per_week=30),
         diet=factors.DietType.VEGAN,
     )
-    result = calculate_footprint(data)
-    insights = generate_rule_based_insights(data, result)
+    result = compute_footprint(data)
+    insights = build_rule_based_recommendations(data, result)
     categories = [r.category for r in insights.recommendations]
     assert "consumption" in categories
 
 
 def test_profile_energy_heavy_household_gets_home_addressed():
     """A user with high electricity and gas: home energy must appear early."""
-    data = CarbonInput(
+    data = FootprintInput(
         home=HomeInput(electricity_kwh_per_month=900, natural_gas_kwh_per_month=600),
         diet=factors.DietType.VEGAN,
     )
-    result = calculate_footprint(data)
-    insights = generate_rule_based_insights(data, result)
+    result = compute_footprint(data)
+    insights = build_rule_based_recommendations(data, result)
     categories = [r.category for r in insights.recommendations]
     assert "home" in categories

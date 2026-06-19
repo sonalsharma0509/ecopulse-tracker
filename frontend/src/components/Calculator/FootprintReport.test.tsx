@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { axe } from "vitest-axe";
-import { ResultBreakdown } from "./ResultBreakdown";
+import { FootprintReport } from "./FootprintReport";
 import type { FootprintResult } from "../lib/types";
 
 const result: FootprintResult = {
@@ -16,14 +16,14 @@ const result: FootprintResult = {
   },
 };
 
-describe("ResultBreakdown", () => {
+describe("FootprintReport", () => {
   it("has no accessibility violations", async () => {
-    const { container } = render(<ResultBreakdown result={result} />);
+    const { container } = render(<FootprintReport result={result} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 
   it("shows the total and a row per category", () => {
-    render(<ResultBreakdown result={result} />);
+    render(<FootprintReport result={result} />);
     expect(screen.getByText(/5 t CO₂e/i)).toBeInTheDocument();
     // Category labels appear (in the bar chart and the data table).
     expect(screen.getAllByText("Transport").length).toBeGreaterThan(0);
@@ -31,7 +31,7 @@ describe("ResultBreakdown", () => {
   });
 
   it("provides an accessible data table equivalent of the chart", () => {
-    render(<ResultBreakdown result={result} />);
+    render(<FootprintReport result={result} />);
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("rowheader", { name: "Diet" })).toBeInTheDocument();
   });

@@ -14,13 +14,13 @@ _DEVICE_ID = Path(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 @router.post("", response_model=Entry, status_code=201)
-async def create_entry(payload: EntryCreate, repo: EntryRepository = Depends(get_repository)) -> Entry:
+async def persist_entry(payload: EntryCreate, repo: EntryRepository = Depends(get_repository)) -> Entry:
     """Persist a footprint entry for the (anonymous) device."""
     return await repo.async_add(payload.device_id, payload.input, payload.result)
 
 
 @router.get("/{device_id}", response_model=list[Entry])
-async def list_entries(
+async def fetch_history(
     device_id: str = _DEVICE_ID,
     limit: int = Query(50, ge=1, le=200),
     repo: EntryRepository = Depends(get_repository),

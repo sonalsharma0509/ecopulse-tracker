@@ -8,8 +8,8 @@ so the persistence logic is exercised without any network or credentials.
 from __future__ import annotations
 
 import pytest
-from app.carbon.calculator import calculate_footprint
-from app.models import CarbonInput
+from app.carbon.calculator import compute_footprint
+from app.models import FootprintInput
 from app.repository.firestore_repo import FirestoreEntryRepository
 
 
@@ -91,8 +91,8 @@ def repo(monkeypatch):
 
 
 def _add(repo, device_id):
-    data = CarbonInput()
-    return repo.add(device_id, data, calculate_footprint(data))
+    data = FootprintInput()
+    return repo.add(device_id, data, compute_footprint(data))
 
 
 def test_add_assigns_id_and_utc_timestamp(repo):

@@ -19,7 +19,7 @@ import asyncio
 import uuid
 from datetime import datetime, timezone
 
-from app.models import CarbonInput, Entry, FootprintResult
+from app.models import FootprintInput, Entry, FootprintResult
 
 _COLLECTION = "devices"
 _SUBCOLLECTION = "entries"
@@ -34,7 +34,7 @@ class FirestoreEntryRepository:
 
         self._db = firestore.Client(project=project_id)
 
-    def add(self, device_id: str, data: CarbonInput, result: FootprintResult) -> Entry:
+    def add(self, device_id: str, data: FootprintInput, result: FootprintResult) -> Entry:
         """Persist a new entry under the device and return it with id/timestamp."""
         entry_id = uuid.uuid4().hex
         created_at = datetime.now(timezone.utc).isoformat()
@@ -79,13 +79,13 @@ class FirestoreEntryRepository:
                     id=snap.id,
                     created_at=raw["created_at"],
                     device_id=device_id,
-                    input=CarbonInput.model_validate(raw["input"]),
+                    input=FootprintInput.model_validate(raw["input"]),
                     result=FootprintResult.model_validate(raw["result"]),
                 )
             )
         return entries
 
-    async def async_add(self, device_id: str, data: CarbonInput, result: FootprintResult) -> Entry:
+    async def async_add(self, device_id: str, data: FootprintInput, result: FootprintResult) -> Entry:
         """Async variant — runs the sync Firestore call in a thread pool."""
         return await asyncio.to_thread(self.add, device_id, data, result)
 

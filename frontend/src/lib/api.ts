@@ -1,6 +1,6 @@
 // Typed client for the backend API. Same-origin in production; proxied in dev.
 
-import type { CarbonInput, Entry, FootprintResult, InsightsResponse } from "./types";
+import type { FootprintInput, Entry, FootprintResult, InsightsResponse } from "./types";
 
 /** POST a JSON body and parse the JSON response, throwing on non-2xx status. */
 async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -16,19 +16,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 /** Compute the annual footprint breakdown for the given lifestyle inputs. */
-export function calculate(input: CarbonInput): Promise<FootprintResult> {
+export function estimateFootprint(input: FootprintInput): Promise<FootprintResult> {
   return postJson<FootprintResult>("/api/calculate", input);
 }
 
 /** Fetch personalized reduction advice (Gemini with rule-based fallback). */
-export function getInsights(input: CarbonInput): Promise<InsightsResponse> {
+export function fetchAdvice(input: FootprintInput): Promise<InsightsResponse> {
   return postJson<InsightsResponse>("/api/insights", input);
 }
 
 /** Save a footprint snapshot to the device's anonymous history. */
-export function saveEntry(
+export function storeEntry(
   deviceId: string,
-  input: CarbonInput,
+  input: FootprintInput,
   result: FootprintResult,
 ): Promise<Entry> {
   return postJson<Entry>("/api/entries", {
@@ -39,7 +39,7 @@ export function saveEntry(
 }
 
 /** List the device's saved entries, newest first. */
-export async function listEntries(deviceId: string): Promise<Entry[]> {
+export async function loadHistory(deviceId: string): Promise<Entry[]> {
   const res = await fetch(`/api/entries/${encodeURIComponent(deviceId)}`);
   if (!res.ok) {
     throw new Error(`Failed to load history (${res.status})`);

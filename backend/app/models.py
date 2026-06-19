@@ -40,20 +40,20 @@ class HomeInput(BaseModel):
     household_size: int = Field(1, ge=1, le=50)
 
 
-class ConsumptionInput(BaseModel):
+class SpendingInput(BaseModel):
     """Consumer goods spending and landfill waste."""
 
     goods_spend_usd_per_month: float = Field(0, ge=0, le=_MAX_USD_MONTH)
     waste_kg_per_week: float = Field(0, ge=0, le=_MAX_WASTE_WEEK)
 
 
-class CarbonInput(BaseModel):
+class FootprintInput(BaseModel):
     """Full set of lifestyle inputs for a footprint estimate."""
 
     transport: TransportInput = Field(default_factory=TransportInput)
     home: HomeInput = Field(default_factory=HomeInput)
     diet: DietType = DietType.MEDIUM_MEAT
-    consumption: ConsumptionInput = Field(default_factory=ConsumptionInput)
+    consumption: SpendingInput = Field(default_factory=SpendingInput)
 
 
 class Comparison(BaseModel):
@@ -96,7 +96,7 @@ class EntryCreate(BaseModel):
     """Request payload to save a footprint snapshot for an anonymous device."""
 
     device_id: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
-    input: CarbonInput
+    input: FootprintInput
     result: FootprintResult
 
 

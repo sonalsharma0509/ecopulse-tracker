@@ -1,23 +1,15 @@
-interface NumberFieldProps {
+interface NumericInputProps {
   id: string;
   label: string;
   value: number;
   onChange: (value: number) => void;
-  /** Upper bound, mirroring the backend schema so the browser rejects out-of-range values. */
   max: number;
   min?: number;
   step?: number | "any";
-  /** Optional helper text, associated with the input via aria-describedby. */
   hint?: string;
 }
 
-/**
- * A labelled numeric input with consistent accessibility wiring: explicit
- * label association, optional hint exposed through `aria-describedby`, and
- * browser-level `min`/`max` bounds. Non-numeric input coerces to 0 so the
- * form state always holds a valid number.
- */
-export function NumberField({
+export function NumericInput({
   id,
   label,
   value,
@@ -26,7 +18,7 @@ export function NumberField({
   min = 0,
   step = "any",
   hint,
-}: NumberFieldProps) {
+}: NumericInputProps) {
   const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="field">
